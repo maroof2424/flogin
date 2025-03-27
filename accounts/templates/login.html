@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register - Face Recognition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        
+        body {
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .register-container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 350px;
+        }
+        
+        h2 {
+            margin-bottom: 15px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        
+        .camera-container {
+            margin: 15px 0;
+        }
+        
+        video {
+            width: 100%;
+            border-radius: 5px;
+        }
+        
+        canvas {
+            display: none; /* Initially hidden */
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            width: 100%;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        #message {
+            color: red;
+            margin-top: 10px;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <h2>Register with Face Recognition</h2>
+        <form id="register-form">
+            <input type="text" id="username" placeholder="Username" required>
+
+            <div class="camera-container">
+                <video id="video" autoplay></video>
+                <button type="button" id="capture-button">Capture Face</button>
+                <canvas id="canvas" width="300" height="200"></canvas>
+            </div>
+
+            <button type="submit">Login</button>
+        </form>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureButton = document.getElementById('capture-button');
+        const registerForm = document.getElementById('register-form');
+        const messageDiv = document.getElementById('message');
+
+        let capturedImage = null;
+
+        // Access the camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+            })
+            .catch((err) => {
+                console.error('Error accessing camera:', err);
+                messageDiv.innerHTML = "Camera access denied!";
+            });
+
+        // Capture image from video
+        captureButton.addEventListener('click', () => {
+            if (!video.srcObject) {
+                messageDiv.innerHTML = "Please allow camera access!";
+                return;
+            }
+            const context = canvas.getContext("2d");
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            capturedImage = canvas.toDataURL("image/jpeg"); // Correct format
+            canvas.style.display = "block"; // Show captured image
+            messageDiv.innerHTML = "Face Captured!";
+        });
+
+        // Prevent form submission if no face is captured
+        registerForm.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Stop default form submission
+            
+            if (!capturedImage) {
+                messageDiv.innerHTML = "Please capture your face before registering!";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('username', document.getElementById('username').value);
+            formData.append('face_image', capturedImage);
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json(); // Fix incorrect response handling
+
+                if (data.success) {
+                    messageDiv.style.color = "green";
+                    messageDiv.innerText = "Registration Successful!";
+                } else {
+                    messageDiv.innerText = data.message || 'Registration Failed';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                messageDiv.innerText = "Error during registration!";
+            }
+        });
+    </script>
+</body>
+</html>
